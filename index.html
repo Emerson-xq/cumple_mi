@@ -106,15 +106,26 @@
   footer .small{margin-top:.8rem;font-size:.75rem;color:var(--text-soft);letter-spacing:.08em;}
 
   /* ---- music button ---- */
-  .music-toggle{position:fixed;bottom:22px;right:22px;z-index:10;width:52px;height:52px;border-radius:50%;background:var(--cream);border:1px solid var(--line);box-shadow:0 8px 24px -10px rgba(201,123,151,.5);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--rose-deep);transition:transform .2s ease;}
-  .music-toggle:hover{transform:scale(1.06);}
-  .bars{display:flex;gap:3px;align-items:flex-end;height:18px;}
-  .bars span{width:3px;background:var(--rose-deep);border-radius:2px;animation:bar .9s ease-in-out infinite;}
-  .music-toggle.paused .bars span{animation-play-state:paused;height:4px!important;}
+  .music-toggle{position:fixed;bottom:22px;right:22px;z-index:10;width:60px;height:60px;border-radius:50%;background:var(--cream);border:1px solid var(--line);box-shadow:0 8px 24px -10px rgba(201,123,151,.5);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--rose-deep);transition:transform .2s ease;}
+  .music-toggle:hover{transform:scale(1.07);}
+  .music-toggle:active{transform:scale(.96);}
+  .music-toggle .mt-icon{position:relative;width:24px;height:24px;display:flex;align-items:center;justify-content:center;}
+  .music-toggle .mt-icon svg{width:24px;height:24px;}
+  .music-toggle .mt-play{display:none;}
+  .music-toggle .mt-pause{display:block;}
+  .music-toggle.paused .mt-play{display:block;}
+  .music-toggle.paused .mt-pause{display:none;}
+  .bars{display:flex;gap:3px;align-items:flex-end;height:14px;position:absolute;bottom:-3px;right:-3px;background:var(--cream);border-radius:50%;padding:3px 4px;box-shadow:0 2px 6px rgba(201,123,151,.3);}
+  .bars span{width:2.5px;background:var(--rose-deep);border-radius:2px;animation:bar .9s ease-in-out infinite;height:5px;}
+  .music-toggle.paused .bars{display:none;}
   .bars span:nth-child(1){animation-delay:0s;}
   .bars span:nth-child(2){animation-delay:.2s;}
   .bars span:nth-child(3){animation-delay:.4s;}
-  @keyframes bar{0%,100%{height:5px;}50%{height:17px;}}
+  @keyframes bar{0%,100%{height:4px;}50%{height:11px;}}
+  .music-label{position:fixed;bottom:30px;right:88px;z-index:10;background:var(--cream);border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:.7rem;letter-spacing:.04em;color:var(--rose-deep);box-shadow:0 6px 18px -8px rgba(201,123,151,.4);opacity:0;pointer-events:none;transition:opacity .3s ease;white-space:nowrap;}
+  .music-label.show{opacity:1;}
+  .music-error{position:fixed;bottom:90px;right:22px;z-index:10;background:#fff3f3;border:1px solid rgba(200,60,60,.3);border-radius:8px;padding:8px 12px;font-size:.68rem;color:#a33;max-width:220px;box-shadow:0 6px 18px -8px rgba(0,0,0,.2);display:none;}
+  .music-error.show{display:block;}
 
   /* ---- music note autoplay indicator ---- */
   .autoplay-notice{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:20;background:var(--cream);border:1px solid var(--line);border-radius:30px;padding:8px 20px;font-size:.75rem;color:var(--rose-deep);letter-spacing:.08em;box-shadow:0 4px 16px rgba(201,123,151,.3);opacity:0;pointer-events:none;transition:opacity .5s;}
@@ -128,6 +139,7 @@
     .vc-time{min-width:32px;font-size:.62rem;}
     .video-controls{padding:8px 10px 10px;gap:7px;}
     .vc-btn{width:32px;height:32px;}
+    .music-label{right:14px;left:14px;bottom:92px;text-align:center;white-space:normal;}
   }
 </style>
 </head>
@@ -240,7 +252,13 @@
 <audio id="bg-music" src="assets/music.mp3" loop preload="auto"></audio>
 
 <!-- ======== BOTÓN DE MÚSICA ======== -->
+<div class="music-label" id="musicLabel">Toca para reproducir música</div>
+<div class="music-error" id="musicError">No se pudo cargar el audio. Verifica que la carpeta <strong>assets</strong> con <strong>music.mp3</strong> esté subida junto al index.html.</div>
 <div class="music-toggle paused" id="musicBtn" role="button" aria-label="Reproducir música" tabindex="0">
+  <div class="mt-icon">
+    <svg class="mt-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    <svg class="mt-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+  </div>
   <div class="bars">
     <span></span><span></span><span></span>
   </div>
@@ -457,6 +475,8 @@ video.addEventListener('play', () => {
 const music = document.getElementById('bg-music');
 const btn = document.getElementById('musicBtn');
 const notice = document.getElementById('autoNotice');
+const musicLabel = document.getElementById('musicLabel');
+const musicError = document.getElementById('musicError');
 let playing = false;
 
 function setPlaying(state) {
@@ -465,13 +485,28 @@ function setPlaying(state) {
   btn.setAttribute('aria-label', playing ? 'Pausar música' : 'Reproducir música');
 }
 
+function showLabelBriefly(text, ms){
+  musicLabel.textContent = text;
+  musicLabel.classList.add('show');
+  clearTimeout(showLabelBriefly._t);
+  showLabelBriefly._t = setTimeout(() => musicLabel.classList.remove('show'), ms || 3200);
+}
+
+// Si el archivo de audio no carga (ruta rota, no subido a GitHub, etc.)
+music.addEventListener('error', () => {
+  musicError.classList.add('show');
+  musicLabel.classList.remove('show');
+});
+
 // Intentar autoplay
 window.addEventListener('load', () => {
   music.volume = 0.45;
+  showLabelBriefly('Toca para reproducir música', 4000);
   music.play().then(() => {
     setPlaying(true);
     notice.classList.add('show');
     setTimeout(() => notice.classList.remove('show'), 3000);
+    musicLabel.classList.remove('show');
   }).catch(() => {
     // Autoplay bloqueado — esperar interacción del usuario
     setPlaying(false);
@@ -482,10 +517,15 @@ function toggleMusic(){
   if(playing){
     music.pause();
     setPlaying(false);
+    showLabelBriefly('Música en pausa', 1800);
   } else {
     video.pause(); // evitar que se solapen los dos audios
-    music.play().catch(()=>{});
-    setPlaying(true);
+    music.play().then(() => {
+      setPlaying(true);
+      musicLabel.classList.remove('show');
+    }).catch(() => {
+      musicError.classList.add('show');
+    });
   }
 }
 btn.addEventListener('click', toggleMusic);
@@ -494,7 +534,7 @@ btn.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' ') { 
 // Desbloquear audio en primer toque (mobile)
 document.addEventListener('touchstart', () => {
   if(!playing && music.paused) {
-    music.play().then(() => setPlaying(true)).catch(()=>{});
+    music.play().then(() => { setPlaying(true); musicLabel.classList.remove('show'); }).catch(()=>{});
   }
 }, { once: true });
 </script>
